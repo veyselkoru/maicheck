@@ -47,7 +47,7 @@ router.get('/:id', async (req: AuthRequest, res) => {
 
 router.post('/', async (req: AuthRequest, res) => {
   const schema = z.object({
-    subcontractorId: z.string().uuid(),
+    subcontractorId: z.string().min(1),
     templateId:      z.string().uuid(),
     periodType:      z.enum(['SINGLE','RANGE']).default('SINGLE'),
     periodMonth:     z.number().int().min(1).max(12).optional(),
