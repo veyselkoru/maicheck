@@ -1,7 +1,9 @@
 // src/lib/api.ts v3.1 — complete
 import axios from 'axios';
 
-const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const FALLBACK_PROD_API = 'https://maicheck-production.up.railway.app';
+const configuredApiBase = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const API_BASE = configuredApiBase || (import.meta.env.PROD ? FALLBACK_PROD_API : '');
 const API_PREFIX = API_BASE ? `${API_BASE}/api` : '/api';
 
 const api = axios.create({ baseURL: API_PREFIX, withCredentials: true });
