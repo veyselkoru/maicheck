@@ -1,7 +1,12 @@
 // src/lib/api.ts v3.1 — complete
 import axios from 'axios';
 
-const api = axios.create({ baseURL: '/api', withCredentials: true });
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const API_PREFIX = API_BASE ? `${API_BASE}/api` : '/api';
+
+const api = axios.create({ baseURL: API_PREFIX, withCredentials: true });
+
+const apiUrl = (path: string) => `${API_PREFIX}${path}`;
 api.interceptors.request.use(cfg => {
   const t = localStorage.getItem('maicheck_token');
   if (t) cfg.headers.Authorization = `Bearer ${t}`;
@@ -68,7 +73,7 @@ export const evidenceApi = {
       onUploadProgress: e => { if (onProgress && e.total) onProgress(Math.round((e.loaded/e.total)*100)); },
     }).then(r=>r.data),
   delete: (id: string) => api.delete(`/evidence/${id}`).then(r=>r.data),
-  downloadUrl: (id: string) => `/api/evidence/${id}/download?token=${localStorage.getItem('maicheck_token')}`,
+  downloadUrl: (id: string) => `${apiUrl(`/evidence/${id}/download`)}?token=${localStorage.getItem('maicheck_token')}`,
 };
 export const findingsApi = {
   list: (p?: object) => api.get('/findings',{params:p}).then(r=>r.data),
@@ -87,8 +92,8 @@ export const reportsApi = {
   listByAudit: (aid: string) => api.get(`/reports/audit/${aid}`).then(r=>r.data),
   generate: (d: {auditId:string;reportType:string;notes?:string[]}) => api.post('/reports/generate',d).then(r=>r.data),
   addNote: (id: string, d: object) => api.post(`/reports/${id}/notes`,d).then(r=>r.data),
-  htmlUrl: (id: string) => `/api/reports/${id}/html?token=${localStorage.getItem('maicheck_token')}`,
-  docxUrl: (id: string) => `/api/reports/${id}/docx?token=${localStorage.getItem('maicheck_token')}`,
+  htmlUrl: (id: string) => `${apiUrl(`/reports/${id}/html`)}?token=${localStorage.getItem('maicheck_token')}`,
+  docxUrl: (id: string) => `${apiUrl(`/reports/${id}/docx`)}?token=${localStorage.getItem('maicheck_token')}`,
 };
 export const dashboardApi = { get: () => api.get('/dashboard').then(r=>r.data) };
 export const impactApi = {
