@@ -1,0 +1,644 @@
+// mAicheck v3.1 — Workforce Compliance Operating System
+// Production-Ready Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  DENETCI
+  YONETICI
+  VIEWER
+}
+
+enum ComplianceStatus {
+  UYGUN
+  KISMI
+  UYGUN_DEGIL
+}
+
+enum RiskLevel {
+  DUSUK
+  ORTA
+  YUKSEK
+  KRITIK
+}
+
+enum AuditStatus {
+  BEKLIYOR
+  DEVAM_EDIYOR
+  TAMAMLANDI
+  IPTAL
+  KILITLI
+}
+
+enum ActionStatus {
+  ACIK
+  DEVAM_EDIYOR
+  TAMAMLANDI
+  GECIKTI
+  IPTAL
+}
+
+enum FindingSeverity {
+  DUSUK
+  ORTA
+  YUKSEK
+  KRITIK
+}
+
+enum ReportType {
+  DETAYLI
+  YONETICI_OZETI
+}
+
+enum ReportStatus {
+  TASLAK
+  YAYINLANDI
+  ARSIVLENDI
+}
+
+enum StorageProvider {
+  LOCAL
+  S3
+  MINIO
+  R2
+}
+
+enum UploadSource {
+  MANUAL
+  PORTAL
+  SECURE_LINK
+  MAILBOX
+  ENTERPRISE_API
+}
+
+enum PeriodType {
+  SINGLE
+  RANGE
+}
+
+enum ImpactMethod {
+  SABIT
+  KISI_BASI
+  GUN_BASI
+  BELGE_BASI
+  ORAN_BAZI
+  KULLANICI_GIRISI
+}
+
+enum ImpactInstitution {
+  SGK
+  VERGI
+  ISKUR
+  IS_HUKUKU
+  ISG
+  DIGER
+}
+
+enum MailStatus {
+  TASLAK
+  GONDERILDI
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         UserRole @default(DENETCI)
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id])
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  auditLogs         AuditLog[]
+  evidenceFiles     EvidenceFile[]
+  reports           Report[]
+  reportNotes       ReportUserNote[]
+  reportVersions    ReportVersion[]
+  correctiveActions CorrectiveAction[]
+  createdTemplates  AuditTemplate[]
+  createdDocTypes   DocumentType[]
+  uploadSessions    UploadSession[]
+  mailDrafts        MailDraft[]
+  createdImpacts    ImpactParameter[]
+
+  @@map("users")
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  taxNumber String?  @unique
+  address   String?
+  phone     String?
+  email     String?
+  plan      String   @default("starter")
+  logoPath  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users            User[]
+  subcontractors   Subcontractor[]
+  audits           Audit[]
+  templates        AuditTemplate[]
+  documentTypes    DocumentType[]
+  findings         Finding[]
+  reports          Report[]
+  auditLogs        AuditLog[]
+  storageObjects   StorageObject[]
+  uploadSessions   UploadSession[]
+  impactParameters ImpactParameter[]
+  contacts         Contact[]
+  mailDrafts       MailDraft[]
+
+  @@map("companies")
+}
+
+model Subcontractor {
+  id                String    @id @default(uuid())
+  companyId         String
+  company           Company   @relation(fields: [companyId], references: [id])
+  name              String
+  taxNumber         String?
+  sgkSicilNo        String?
+  contractStart     DateTime?
+  contractEnd       DateTime?
+  workArea          String?
+  responsiblePerson String?
+  email             String?
+  phone             String?
+  logoPath          String?
+  performanceScore  Float?
+  lastScoreCalcAt   DateTime?
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  audits        Audit[]
+  evidenceFiles EvidenceFile[]
+  contacts      Contact[]
+  mailDrafts    MailDraft[]
+
+  @@map("subcontractors")
+}
+
+model AuditTemplate {
+  id          String   @id @default(uuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  name        String
+  description String?
+  purpose     String?
+  sectorTag   String?
+  isDefault   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items  AuditTemplateItem[]
+  audits Audit[]
+
+  @@map("audit_templates")
+}
+
+model AuditTemplateItem {
+  id                  String        @id @default(uuid())
+  companyId           String
+  templateId          String
+  template            AuditTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  auditArea           String
+  controlSubject      String
+  legalBasis          String?
+  requiredDocTypeId   String?
+  requiredDocType     DocumentType? @relation(fields: [requiredDocTypeId], references: [id])
+  requiredDocNameNote String?
+  isDocumentRequired  Boolean       @default(false)
+  defaultRiskLevel    RiskLevel     @default(ORTA)
+  defaultRiskScore    Int           @default(3)
+  defaultCorrective   String?
+  auditNote           String?
+  orderNo             Int           @default(0)
+  isCritical          Boolean       @default(false)
+  isActive            Boolean       @default(true)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  auditItems AuditItem[]
+
+  @@map("audit_template_items")
+}
+
+model DocumentType {
+  id               String   @id @default(uuid())
+  companyId        String
+  company          Company  @relation(fields: [companyId], references: [id])
+  name             String
+  code             String
+  category         String
+  description      String?
+  defaultRequired  Boolean  @default(false)
+  allowedFileTypes String[] @default([])
+  maxFileSizeMb    Int      @default(50)
+  retentionMonths  Int      @default(84)
+  isActive         Boolean  @default(true)
+  createdById      String
+  createdBy        User     @relation(fields: [createdById], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  templateItems AuditTemplateItem[]
+  auditItems    AuditItem[]
+  evidenceFiles EvidenceFile[]
+
+  @@unique([companyId, code])
+  @@map("document_types")
+}
+
+model Audit {
+  id              String         @id @default(uuid())
+  companyId       String
+  company         Company        @relation(fields: [companyId], references: [id])
+  subcontractorId String
+  subcontractor   Subcontractor  @relation(fields: [subcontractorId], references: [id])
+  templateId      String?
+  template        AuditTemplate? @relation(fields: [templateId], references: [id])
+  templateSnapshot String?
+
+  // Period Range Support
+  periodType   PeriodType @default(SINGLE)
+  periodMonth  Int?
+  periodYear   Int?
+  startMonth   Int?
+  startYear    Int?
+  endMonth     Int?
+  endYear      Int?
+  periodLabel  String?
+
+  status       AuditStatus @default(BEKLIYOR)
+  isLocked     Boolean     @default(false)
+  lockedAt     DateTime?
+  lockedById   String?
+
+  auditorId    String?
+  auditorName  String?
+  title        String?
+  notes        String?
+  riskScore    Int?
+  trafficLight String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items         AuditItem[]
+  evidenceFiles EvidenceFile[]
+  findings      Finding[]
+  reports       Report[]
+  auditLogs     AuditLog[]
+  mailDrafts    MailDraft[]
+
+  @@map("audits")
+}
+
+model AuditItem {
+  id                   String             @id @default(uuid())
+  companyId            String
+  auditId              String
+  audit                Audit              @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  sourceTemplateItemId String?
+  sourceTemplateItem   AuditTemplateItem? @relation(fields: [sourceTemplateItemId], references: [id])
+
+  auditArea               String
+  controlSubject          String
+  legalBasis              String?
+  requiredDocTypeId       String?
+  requiredDocType         DocumentType? @relation(fields: [requiredDocTypeId], references: [id])
+  requiredDocNameSnapshot String?
+  isDocumentRequired      Boolean       @default(false)
+  isCritical              Boolean       @default(false)
+  orderNo                 Int           @default(0)
+
+  compliance           ComplianceStatus?
+  riskLevel            RiskLevel?
+  riskScore            Int?
+  findingText          String?
+  correctiveActionText String?
+  responsiblePerson    String?
+  dueDate              DateTime?
+  actionStatus         ActionStatus?
+  closedAt             DateTime?
+  closureNote          String?
+
+  estimatedFinancialImpact Decimal? @db.Decimal(18, 2)
+  financialImpactMethod    String?
+  financialImpactNote      String?
+  impactParameterId        String?
+  impactParameter          ImpactParameter? @relation(fields: [impactParameterId], references: [id])
+
+  subcontractorNote     String?
+  subcontractorNoteDate DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  evidenceFiles     EvidenceFile[]
+  findings          Finding[]
+  correctiveActions CorrectiveAction[]
+  auditLogs         AuditLog[]
+
+  @@map("audit_items")
+}
+
+model EvidenceFile {
+  id              String         @id @default(uuid())
+  companyId       String
+  auditId         String?
+  audit           Audit?         @relation(fields: [auditId], references: [id])
+  auditItemId     String?
+  auditItem       AuditItem?     @relation(fields: [auditItemId], references: [id])
+  subcontractorId String?
+  subcontractor   Subcontractor? @relation(fields: [subcontractorId], references: [id])
+  documentTypeId  String?
+  documentType    DocumentType?  @relation(fields: [documentTypeId], references: [id])
+
+  originalFilename String
+  storedFilename   String
+  storageKey       String
+  storageProvider  StorageProvider @default(LOCAL)
+  mimeType         String?
+  fileSize         Int?
+  extension        String?
+  checksum         String?
+
+  uploadedById    String
+  uploadedBy      User         @relation(fields: [uploadedById], references: [id])
+  uploadedAt      DateTime     @default(now())
+  uploadSource    UploadSource @default(MANUAL)
+  sourceMessageId String?
+  sourceMetadata  Json?
+  description     String?
+  versionNo       Int          @default(1)
+  status          String       @default("active")
+
+  versions      EvidenceFileVersion[]
+  uploadSession UploadSession?
+  closedActions CorrectiveAction[]
+
+  @@map("evidence_files")
+}
+
+model EvidenceFileVersion {
+  id             String       @id @default(uuid())
+  evidenceFileId String
+  evidenceFile   EvidenceFile @relation(fields: [evidenceFileId], references: [id], onDelete: Cascade)
+  versionNo      Int
+  storageKey     String
+  fileSize       Int?
+  checksum       String?
+  uploadedById   String
+  uploadedAt     DateTime     @default(now())
+  changeNote     String?
+
+  @@map("evidence_file_versions")
+}
+
+model Finding {
+  id          String         @id @default(uuid())
+  companyId   String
+  company     Company        @relation(fields: [companyId], references: [id])
+  auditId     String
+  audit       Audit          @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  auditItemId String?
+  auditItem   AuditItem?     @relation(fields: [auditItemId], references: [id])
+  severity    FindingSeverity @default(ORTA)
+  title       String
+  description String?
+  status      ActionStatus   @default(ACIK)
+
+  estimatedFinancialImpact Decimal? @db.Decimal(18, 2)
+  financialImpactNote      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  correctiveActions CorrectiveAction[]
+
+  @@map("findings")
+}
+
+model CorrectiveAction {
+  id                    String        @id @default(uuid())
+  companyId             String
+  findingId             String?
+  finding               Finding?      @relation(fields: [findingId], references: [id])
+  auditItemId           String?
+  auditItem             AuditItem?    @relation(fields: [auditItemId], references: [id])
+  actionText            String
+  responsiblePerson     String?
+  dueDate               DateTime?
+  status                ActionStatus  @default(ACIK)
+  closedAt              DateTime?
+  closureNote           String?
+  closureEvidenceFileId String?
+  closureEvidence       EvidenceFile? @relation(fields: [closureEvidenceFileId], references: [id])
+  assignedToId          String?
+  assignedTo            User?         @relation(fields: [assignedToId], references: [id])
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@map("corrective_actions")
+}
+
+model Report {
+  id            String       @id @default(uuid())
+  companyId     String
+  company       Company      @relation(fields: [companyId], references: [id])
+  auditId       String
+  audit         Audit        @relation(fields: [auditId], references: [id])
+  reportType    ReportType
+  title         String
+  status        ReportStatus @default(TASLAK)
+  generatedById String
+  generatedBy   User         @relation(fields: [generatedById], references: [id])
+  generatedAt   DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  versions ReportVersion[]
+  notes    ReportUserNote[]
+
+  @@map("reports")
+}
+
+model ReportVersion {
+  id                String   @id @default(uuid())
+  reportId          String
+  report            Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  versionNo         Int
+  systemContentJson Json
+  htmlContent       String?  @db.Text
+  pdfPath           String?
+  docxPath          String?
+  createdById       String
+  createdBy         User     @relation(fields: [createdById], references: [id])
+  createdAt         DateTime @default(now())
+
+  notes ReportUserNote[]
+
+  @@map("report_versions")
+}
+
+model ReportUserNote {
+  id              String         @id @default(uuid())
+  reportId        String
+  report          Report         @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  reportVersionId String?
+  reportVersion   ReportVersion? @relation(fields: [reportVersionId], references: [id])
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+  noteTitle       String?
+  noteContent     String         @db.Text
+  createdAt       DateTime       @default(now())
+
+  @@map("report_user_notes")
+}
+
+model ImpactParameter {
+  id              String            @id @default(uuid())
+  companyId       String
+  company         Company           @relation(fields: [companyId], references: [id])
+  name            String
+  institution     ImpactInstitution
+  legalReference  String?
+  method          ImpactMethod
+  fixedAmount     Decimal?          @db.Decimal(18, 2)
+  dailyAmount     Decimal?          @db.Decimal(18, 2)
+  perPersonAmount Decimal?          @db.Decimal(18, 2)
+  perDocAmount    Decimal?          @db.Decimal(18, 2)
+  ratePercent     Decimal?          @db.Decimal(8, 4)
+  minAmount       Decimal?          @db.Decimal(18, 2)
+  maxAmount       Decimal?          @db.Decimal(18, 2)
+  validFrom       DateTime?
+  validTo         DateTime?
+  description     String?
+  isActive        Boolean           @default(true)
+  createdById     String
+  createdBy       User              @relation(fields: [createdById], references: [id])
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  auditItems AuditItem[]
+
+  @@map("impact_parameters")
+}
+
+model Contact {
+  id              String         @id @default(uuid())
+  companyId       String
+  company         Company        @relation(fields: [companyId], references: [id])
+  subcontractorId String?
+  subcontractor   Subcontractor? @relation(fields: [subcontractorId], references: [id])
+  name            String
+  title           String?
+  email           String?
+  phone           String?
+  isPrimary       Boolean        @default(false)
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  mailDrafts MailDraft[]
+
+  @@map("contacts")
+}
+
+model MailDraft {
+  id              String         @id @default(uuid())
+  companyId       String
+  company         Company        @relation(fields: [companyId], references: [id])
+  auditId         String?
+  audit           Audit?         @relation(fields: [auditId], references: [id])
+  subcontractorId String?
+  subcontractor   Subcontractor? @relation(fields: [subcontractorId], references: [id])
+  contactId       String?
+  contact         Contact?       @relation(fields: [contactId], references: [id])
+  toEmail         String?
+  subject         String
+  bodyText        String         @db.Text
+  bodyHtml        String?        @db.Text
+  templateType    String
+  status          MailStatus     @default(TASLAK)
+  sentAt          DateTime?
+  createdById     String
+  createdBy       User           @relation(fields: [createdById], references: [id])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@map("mail_drafts")
+}
+
+model AuditLog {
+  id          String     @id @default(uuid())
+  companyId   String
+  company     Company    @relation(fields: [companyId], references: [id])
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  entityType  String
+  entityId    String
+  action      String
+  oldValue    Json?
+  newValue    Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime   @default(now())
+  auditId     String?
+  audit       Audit?     @relation(fields: [auditId], references: [id])
+  auditItemId String?
+  auditItem   AuditItem? @relation(fields: [auditItemId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model StorageObject {
+  id              String          @id @default(uuid())
+  companyId       String
+  company         Company         @relation(fields: [companyId], references: [id])
+  storageProvider StorageProvider @default(LOCAL)
+  bucket          String?
+  objectKey       String
+  fileSize        Int?
+  mimeType        String?
+  checksum        String?
+  createdAt       DateTime        @default(now())
+
+  @@map("storage_objects")
+}
+
+model UploadSession {
+  id               String        @id @default(uuid())
+  uploadMode       UploadSource  @default(MANUAL)
+  companyId        String
+  company          Company       @relation(fields: [companyId], references: [id])
+  evidenceFileId   String?       @unique
+  evidenceFile     EvidenceFile? @relation(fields: [evidenceFileId], references: [id])
+  uploadedByUserId String?
+  uploadedByUser   User?         @relation(fields: [uploadedByUserId], references: [id])
+  ipAddress        String
+  userAgent        String?
+  fileName         String?
+  fileSize         Int?
+  documentType     String?
+  uploadedAt       DateTime      @default(now())
+
+  @@map("upload_sessions")
+}

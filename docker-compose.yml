@@ -1,0 +1,71 @@
+version: '3.9'
+
+services:
+  # ─── PostgreSQL ───────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: maicheck_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: maicheck
+      POSTGRES_PASSWORD: maicheck123
+      POSTGRES_DB: maicheck_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - maicheck_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U maicheck -d maicheck_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─── Backend ──────────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: maicheck_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://maicheck:maicheck123@postgres:5432/maicheck_db?schema=public"
+      JWT_SECRET: "maicheck-v31-super-secret-jwt-key"
+      JWT_EXPIRES_IN: "7d"
+      PORT: "3001"
+      NODE_ENV: "production"
+      FRONTEND_URL: "http://localhost"
+      UPLOAD_DIR: "/app/uploads"
+      MAX_FILE_SIZE_MB: "100"
+    volumes:
+      - uploads_data:/app/uploads
+    networks:
+      - maicheck_net
+    command: >
+      sh -c "npx prisma migrate deploy && npx ts-node prisma/seed.ts 2>/dev/null || true && npx ts-node src/index.ts"
+
+  # ─── Frontend (Nginx) ─────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: maicheck_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - maicheck_net
+
+volumes:
+  pgdata:
+    name: maicheck_pgdata
+  uploads_data:
+    name: maicheck_uploads
+
+networks:
+  maicheck_net:
+    name: maicheck_network

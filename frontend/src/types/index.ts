@@ -1,0 +1,4 @@
+export interface DocumentType { id:string; name:string; code:string; category:string; description?:string; isActive:boolean; defaultRequired:boolean; }
+export interface Subcontractor { id:string; name:string; taxNumber?:string; sgkSicilNo?:string; email?:string; phone?:string; responsiblePerson?:string; workArea?:string; contractStart?:string; contractEnd?:string; performanceScore?:number; isActive:boolean; logoPath?:string; _count?:any; }
+export interface AuditTemplate { id:string; name:string; description?:string; purpose?:string; sectorTag?:string; isDefault:boolean; isActive:boolean; items?:TemplateItem[]; _count?:any; }
+export interface TemplateItem { id:string; templateId:string; auditArea:string; controlSubject:string; legalBasis?:string; requiredDocTypeId?:string; requiredDocType?:DocumentType; isDocumentRequired:boolean; defaultRiskLevel:string; defaultRiskScore:number; isCritical:boolean; isActive:boolean; orderNo:number; defaultCorrective?:string; }

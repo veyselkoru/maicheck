@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  body { @apply font-sans bg-slate-50 text-slate-800 antialiased; }
+  ::-webkit-scrollbar { @apply w-1; }
+  ::-webkit-scrollbar-thumb { @apply bg-slate-300 rounded-full; }
+}
+
+@layer components {
+  .btn { @apply inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold cursor-pointer transition-all duration-150 border-0 outline-none; }
+  .btn-primary { @apply bg-brand text-white hover:bg-brand-hover; }
+  .btn-secondary { @apply bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:border-slate-300; }
+  .btn-danger { @apply bg-red-50 text-red-600 border border-red-200 hover:bg-red-100; }
+  .btn-sm { @apply px-2.5 py-1.5 text-xs; }
+  .btn-xs { @apply px-2 py-1 text-xs; }
+
+  .card { @apply bg-white border border-slate-200 rounded-xl overflow-hidden; }
+  .card-header { @apply px-5 py-3.5 border-b border-slate-100 flex items-center justify-between; }
+  .card-title { @apply text-sm font-bold text-slate-800; }
+  .card-body { @apply p-5; }
+
+  .input { @apply w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-sans text-slate-700 outline-none transition-colors focus:border-brand; }
+  .select { @apply w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-sans text-slate-700 bg-white outline-none focus:border-brand; }
+  .label { @apply block text-xs font-semibold text-slate-500 mb-1; }
+  .form-group { @apply mb-3.5; }
+
+  .badge { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border; }
+  .badge-green { @apply bg-emerald-50 text-emerald-700 border-emerald-200; }
+  .badge-yellow { @apply bg-amber-50 text-amber-700 border-amber-200; }
+  .badge-red { @apply bg-red-50 text-red-600 border-red-200; }
+  .badge-orange { @apply bg-orange-50 text-orange-600 border-orange-200; }
+  .badge-blue { @apply bg-blue-50 text-blue-700 border-blue-200; }
+  .badge-gray { @apply bg-slate-100 text-slate-500 border-slate-200; }
+
+  .table-wrap { @apply overflow-x-auto; }
+  .tbl { @apply w-full border-collapse; }
+  .tbl th { @apply px-3.5 py-2.5 text-left text-xs font-bold text-slate-400 uppercase tracking-wide bg-slate-50 border-b border-slate-200; }
+  .tbl td { @apply px-3.5 py-2.5 text-sm text-slate-600 border-b border-slate-100 align-middle; }
+  .tbl tr:last-child td { @apply border-0; }
+  .tbl tr:hover td { @apply bg-slate-50/60; }
+
+  .sidebar-item { @apply flex items-center gap-2.5 px-4 py-2.5 cursor-pointer text-white/60 text-[13px] font-medium border-l-2 border-transparent transition-all hover:text-white hover:bg-white/5; }
+  .sidebar-item.active { @apply text-white bg-brand/20 border-l-brand; }
+
+  .select-uygun { @apply bg-emerald-50 text-emerald-700 border-emerald-300 font-semibold; }
+  .select-kismi  { @apply bg-amber-50  text-amber-700  border-amber-300  font-semibold; }
+  .select-uygun-degil { @apply bg-red-50 text-red-600 border-red-300 font-semibold; }
+
+  .risk-chip { @apply inline-flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold font-mono; }
+  .risk-1 { @apply bg-emerald-100 text-emerald-800; }
+  .risk-2 { @apply bg-green-100 text-green-800; }
+  .risk-3 { @apply bg-amber-100 text-amber-800; }
+  .risk-4 { @apply bg-orange-100 text-orange-800; }
+  .risk-5 { @apply bg-red-100 text-red-800; }
+
+  .kpi-card { @apply bg-white border border-slate-200 rounded-xl p-4 relative overflow-hidden; }
+  .page-title { @apply text-[22px] font-bold text-slate-800 tracking-tight; }
+  .page-sub { @apply text-sm text-slate-400 mt-0.5; }
+}
